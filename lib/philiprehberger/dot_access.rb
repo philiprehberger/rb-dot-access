@@ -66,9 +66,9 @@ module Philiprehberger
 
     # Null object that responds to any method with nil
     class NullAccess
-      # @return [nil]
+      # @return [NullAccess] returns self for chaining
       def method_missing(_name, *_args) # rubocop:disable Style/MissingRespondToMissing
-        nil
+        self
       end
 
       # @return [true]
