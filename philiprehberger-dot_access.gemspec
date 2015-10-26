@@ -10,8 +10,8 @@ Gem::Specification.new do |spec|
 
   spec.summary       = 'Dot-notation accessor for nested hashes with nil-safe traversal'
   spec.description   = 'Access deeply nested hash values using dot notation (config.database.host) ' \
-                        'with nil-safe traversal that never raises on missing keys. Supports ' \
-                        'path-based get/set, YAML/JSON loading, and immutable updates.'
+                       'with nil-safe traversal that never raises on missing keys. Supports ' \
+                       'path-based get/set, YAML/JSON loading, and immutable updates.'
   spec.homepage      = 'https://github.com/philiprehberger/rb-dot-access'
   spec.license       = 'MIT'
 
