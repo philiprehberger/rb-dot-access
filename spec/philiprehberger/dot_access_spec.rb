@@ -357,6 +357,65 @@ RSpec.describe Philiprehberger::DotAccess do
     end
   end
 
+  describe '#fetch!' do
+    let(:config) { described_class.wrap({ a: { b: { c: 'deep' } }, x: nil }) }
+
+    it 'returns the value at the path' do
+      expect(config.fetch!('a.b.c')).to eq('deep')
+    end
+
+    it 'returns nil values that exist' do
+      expect(config.fetch!('x')).to be_nil
+    end
+
+    it 'raises KeyError for missing paths' do
+      expect { config.fetch!('a.b.missing') }.to raise_error(KeyError, /a\.b\.missing/)
+    end
+
+    it 'raises KeyError for completely missing paths' do
+      expect { config.fetch!('z.y') }.to raise_error(KeyError)
+    end
+  end
+
+  describe '#slice' do
+    let(:config) { described_class.wrap({ a: { b: 1, c: 2 }, d: 3, e: 4 }) }
+
+    it 'returns a new Wrapper with only the given paths' do
+      result = config.slice('a.b', 'd')
+      expect(result.to_h).to eq({ a: { b: 1 }, d: 3 })
+    end
+
+    it 'returns an empty Wrapper when no paths match' do
+      expect(config.slice('z').to_h).to eq({})
+    end
+
+    it 'ignores missing paths' do
+      result = config.slice('a.b', 'missing')
+      expect(result.to_h).to eq({ a: { b: 1 } })
+    end
+
+    it 'does not mutate the original' do
+      config.slice('a.b')
+      expect(config.to_h).to eq({ a: { b: 1, c: 2 }, d: 3, e: 4 })
+    end
+  end
+
+  describe '#values_at' do
+    let(:config) { described_class.wrap({ a: { b: 1 }, c: 2 }) }
+
+    it 'returns values for the given paths in order' do
+      expect(config.values_at('a.b', 'c')).to eq([1, 2])
+    end
+
+    it 'returns nil for missing paths' do
+      expect(config.values_at('a.b', 'missing')).to eq([1, nil])
+    end
+
+    it 'returns an empty array when given no paths' do
+      expect(config.values_at).to eq([])
+    end
+  end
+
   describe 'edge cases' do
     it 'handles an empty hash' do
       config = described_class.wrap({})
