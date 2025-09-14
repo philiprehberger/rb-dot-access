@@ -416,6 +416,107 @@ RSpec.describe Philiprehberger::DotAccess do
     end
   end
 
+  describe '#each / #each_pair' do
+    let(:config) { described_class.wrap({ a: 1, b: { c: 2 } }) }
+
+    it 'yields top-level key-value pairs' do
+      pairs = config.map { |key, value| [key, value.is_a?(Philiprehberger::DotAccess::Wrapper) ? value.to_h : value] }
+      expect(pairs).to contain_exactly([:a, 1], [:b, { c: 2 }])
+    end
+
+    it 'returns an enumerator without a block' do
+      expect(config.each).to be_a(Enumerator)
+    end
+
+    it 'wraps nested hashes in the yielded values' do
+      config.each do |key, value|
+        expect(value).to be_a(Philiprehberger::DotAccess::Wrapper) if key == :b
+      end
+    end
+
+    it 'is aliased as each_pair' do
+      pairs = config.each_pair.to_a.map { |k, v| [k, v.is_a?(Philiprehberger::DotAccess::Wrapper) ? v.to_h : v] }
+      expect(pairs).to contain_exactly([:a, 1], [:b, { c: 2 }])
+    end
+  end
+
+  describe 'Enumerable' do
+    let(:config) { described_class.wrap({ a: 1, b: 2, c: 3 }) }
+
+    it 'supports map' do
+      values = config.map { |_key, value| value * 2 }
+      expect(values).to contain_exactly(2, 4, 6)
+    end
+
+    it 'supports select' do
+      result = config.select { |_key, value| value > 1 }
+      expect(result.map { |k, _v| k }).to contain_exactly(:b, :c)
+    end
+
+    it 'supports any?' do
+      expect(config.any? { |_key, value| value == 2 }).to be(true)
+      expect(config.any? { |_key, value| value == 99 }).to be(false)
+    end
+
+    it 'supports none?' do
+      expect(config.none? { |_key, value| value == 99 }).to be(true)
+    end
+  end
+
+  describe '#empty?' do
+    it 'returns true for empty wrapper' do
+      expect(described_class.wrap({}).empty?).to be(true)
+    end
+
+    it 'returns false for non-empty wrapper' do
+      expect(described_class.wrap({ a: 1 }).empty?).to be(false)
+    end
+  end
+
+  describe '#size / #count' do
+    it 'returns the number of top-level keys' do
+      config = described_class.wrap({ a: 1, b: { c: 2 }, d: 3 })
+      expect(config.size).to eq(3)
+    end
+
+    it 'returns 0 for empty wrapper' do
+      expect(described_class.wrap({}).size).to eq(0)
+    end
+
+    it 'is aliased as count' do
+      config = described_class.wrap({ a: 1, b: 2 })
+      expect(config.count).to eq(2)
+    end
+  end
+
+  describe '#to_json' do
+    it 'serializes to JSON string' do
+      config = described_class.wrap({ name: 'app', port: 3000 })
+      parsed = JSON.parse(config.to_json)
+      expect(parsed).to eq({ 'name' => 'app', 'port' => 3000 })
+    end
+
+    it 'serializes nested structures' do
+      config = described_class.wrap({ a: { b: 1 } })
+      parsed = JSON.parse(config.to_json)
+      expect(parsed).to eq({ 'a' => { 'b' => 1 } })
+    end
+  end
+
+  describe '#to_yaml' do
+    it 'serializes to YAML string' do
+      config = described_class.wrap({ name: 'app', port: 3000 })
+      parsed = YAML.safe_load(config.to_yaml, permitted_classes: [Symbol])
+      expect(parsed).to eq({ name: 'app', port: 3000 })
+    end
+
+    it 'serializes nested structures' do
+      config = described_class.wrap({ a: { b: 1 } })
+      parsed = YAML.safe_load(config.to_yaml, permitted_classes: [Symbol])
+      expect(parsed).to eq({ a: { b: 1 } })
+    end
+  end
+
   describe 'edge cases' do
     it 'handles an empty hash' do
       config = described_class.wrap({})
