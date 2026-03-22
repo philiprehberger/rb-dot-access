@@ -112,7 +112,7 @@ module Philiprehberger
         result = keys.reduce(@data) do |current, key|
           case current
           when Hash then current[key.to_sym]
-          when Wrapper then current.dig(key.to_sym)
+          when Wrapper then current[key.to_sym]
           else return default
           end
         end
@@ -193,7 +193,7 @@ module Philiprehberger
           hash.merge(key => value)
         else
           child = hash.fetch(key, {})
-          child = child.is_a?(Hash) ? child : {}
+          child = {} unless child.is_a?(Hash)
           hash.merge(key => deep_set(child, keys[1..], value))
         end
       end
