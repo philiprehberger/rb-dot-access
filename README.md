@@ -15,7 +15,7 @@ Dot-notation accessor for nested hashes with nil-safe traversal
 Add to your Gemfile:
 
 ```ruby
-gem 'philiprehberger-dot_access'
+gem "philiprehberger-dot_access"
 ```
 
 Or install directly:
@@ -109,8 +109,8 @@ config.to_h  # => { a: { b: 1 } }
 
 ```bash
 bundle install
-bundle exec rspec      # Run tests
-bundle exec rubocop    # Check code style
+bundle exec rspec
+bundle exec rubocop
 ```
 
 ## License
