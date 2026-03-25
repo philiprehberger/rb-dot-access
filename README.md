@@ -27,7 +27,7 @@ gem install philiprehberger-dot_access
 ## Usage
 
 ```ruby
-require 'philiprehberger/dot_access'
+require "philiprehberger/dot_access"
 
 config = Philiprehberger::DotAccess.wrap({ database: { host: 'localhost', port: 5432 } })
 config.database.host  # => "localhost"
