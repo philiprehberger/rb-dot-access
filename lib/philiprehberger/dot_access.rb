@@ -131,6 +131,74 @@ module Philiprehberger
         Wrapper.new(new_data)
       end
 
+      # Check if a dot-separated path exists in the wrapped hash
+      #
+      # @param path [String] dot-separated key path
+      # @return [Boolean] true if the path exists (even if value is nil)
+      def exists?(path)
+        keys = path.to_s.split('.')
+        current = @data
+        keys.each do |key|
+          case current
+          when Hash
+            return false unless current.key?(key.to_sym)
+
+            current = current[key.to_sym]
+          when Wrapper
+            return false unless current.key?(key.to_sym)
+
+            current = current[key.to_sym]
+          else
+            return false
+          end
+        end
+        true
+      end
+
+      # Return all dot-path keys as strings
+      #
+      # @param depth [Integer, nil] maximum traversal depth (nil for unlimited)
+      # @return [Array<String>] array of dot-path strings
+      def keys(depth: nil)
+        collect_keys(@data, '', depth, 1)
+      end
+
+      # Remove a key at a dot-path, returning a new Wrapper
+      #
+      # @param path [String] dot-separated key path
+      # @return [Wrapper] a new wrapper without the specified path
+      def delete(path)
+        keys = path.to_s.split('.')
+        new_data = deep_delete(to_h, keys)
+        Wrapper.new(new_data)
+      end
+
+      # Flatten nested structure into a hash with dot-path keys
+      #
+      # @return [Hash] flat hash where keys are dot-path strings
+      def flatten
+        flatten_hash(@data, '')
+      end
+
+      # Deep merge with another Wrapper or Hash
+      #
+      # @param other [Wrapper, Hash] the other structure to merge
+      # @return [Wrapper] a new wrapper with merged values
+      def merge(other)
+        other_hash = other.is_a?(Wrapper) ? other.to_h : symbolize_keys(other)
+        merged = deep_merge(to_h, other_hash)
+        Wrapper.new(merged)
+      end
+
+      # Check if a key exists in the underlying data
+      #
+      # @param key [Symbol] the key to check
+      # @return [Boolean]
+      # @api private
+      def key?(key)
+        @data.key?(key)
+      end
+
       # Return the underlying hash
       #
       # @return [Hash] the original hash with symbol keys
@@ -183,6 +251,58 @@ module Philiprehberger
         when Hash then Wrapper.new(value)
         when NilClass then NullAccess.new
         else value
+        end
+      end
+
+      def collect_keys(hash, prefix, max_depth, current_depth)
+        result = []
+        hash.each do |key, value|
+          full_key = prefix.empty? ? key.to_s : "#{prefix}.#{key}"
+          if value.is_a?(Hash) && (max_depth.nil? || current_depth < max_depth)
+            result.concat(collect_keys(value, full_key, max_depth, current_depth + 1))
+          else
+            result << full_key
+          end
+        end
+        result
+      end
+
+      def deep_delete(hash, keys)
+        key = keys.first.to_sym
+        return hash.reject { |k, _| k == key } if keys.length == 1
+        return hash unless hash.key?(key) && hash[key].is_a?(Hash)
+
+        child = deep_delete(hash[key], keys[1..])
+        hash.merge(key => child)
+      end
+
+      def flatten_hash(hash, prefix)
+        result = {}
+        hash.each do |key, value|
+          full_key = prefix.empty? ? key.to_s : "#{prefix}.#{key}"
+          if value.is_a?(Hash)
+            result.merge!(flatten_hash(value, full_key))
+          else
+            result[full_key] = value
+          end
+        end
+        result
+      end
+
+      def deep_merge(base, other)
+        base.merge(other) do |_key, old_val, new_val|
+          if old_val.is_a?(Hash) && new_val.is_a?(Hash)
+            deep_merge(old_val, new_val)
+          else
+            new_val
+          end
+        end
+      end
+
+      def symbolize_keys(hash)
+        hash.each_with_object({}) do |(key, value), memo|
+          sym_key = key.is_a?(String) ? key.to_sym : key
+          memo[sym_key] = value.is_a?(Hash) ? symbolize_keys(value) : value
         end
       end
 

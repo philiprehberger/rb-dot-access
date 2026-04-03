@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-03
+
+### Added
+- `exists?` for checking path existence
+- `keys` for listing all dot-paths with optional depth limit
+- `delete` for immutable path removal
+- `flatten` for converting nested structure to flat dot-path hash
+- `merge` for deep merging two wrapped structures
+
 ## [0.1.6] - 2026-03-31
 
 ### Added

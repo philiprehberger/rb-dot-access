@@ -179,6 +179,184 @@ RSpec.describe Philiprehberger::DotAccess do
     end
   end
 
+  describe '#exists?' do
+    let(:hash) { { a: { b: { c: 'deep' } }, x: nil } }
+    let(:config) { described_class.wrap(hash) }
+
+    it 'returns true for existing top-level keys' do
+      expect(config.exists?('a')).to be(true)
+    end
+
+    it 'returns true for nested paths' do
+      expect(config.exists?('a.b.c')).to be(true)
+    end
+
+    it 'returns true for paths with nil values' do
+      expect(config.exists?('x')).to be(true)
+    end
+
+    it 'returns false for non-existent paths' do
+      expect(config.exists?('z')).to be(false)
+    end
+
+    it 'returns false for non-existent nested paths' do
+      expect(config.exists?('a.b.missing')).to be(false)
+    end
+
+    it 'returns false for paths beyond leaf nodes' do
+      expect(config.exists?('a.b.c.d')).to be(false)
+    end
+
+    it 'returns false on empty hash' do
+      empty = described_class.wrap({})
+      expect(empty.exists?('anything')).to be(false)
+    end
+  end
+
+  describe '#keys' do
+    it 'returns top-level keys for flat hash' do
+      config = described_class.wrap({ a: 1, b: 2 })
+      expect(config.keys).to contain_exactly('a', 'b')
+    end
+
+    it 'returns dot-paths for nested hash' do
+      config = described_class.wrap({ a: { b: 1 }, c: 2 })
+      expect(config.keys).to contain_exactly('a.b', 'c')
+    end
+
+    it 'returns deeply nested dot-paths' do
+      config = described_class.wrap({ a: { b: { c: { d: 1 } } } })
+      expect(config.keys).to eq(['a.b.c.d'])
+    end
+
+    it 'limits depth when specified' do
+      config = described_class.wrap({ a: { b: { c: 1 } }, d: 2 })
+      expect(config.keys(depth: 1)).to contain_exactly('a', 'd')
+    end
+
+    it 'limits depth at 2' do
+      config = described_class.wrap({ a: { b: { c: 1 } }, d: 2 })
+      expect(config.keys(depth: 2)).to contain_exactly('a.b', 'd')
+    end
+
+    it 'returns empty array for empty hash' do
+      config = described_class.wrap({})
+      expect(config.keys).to eq([])
+    end
+  end
+
+  describe '#delete' do
+    let(:hash) { { a: { b: 1, c: 2 }, d: 3 } }
+    let(:config) { described_class.wrap(hash) }
+
+    it 'removes a top-level key' do
+      result = config.delete('d')
+      expect(result.to_h).to eq({ a: { b: 1, c: 2 } })
+    end
+
+    it 'removes a nested key' do
+      result = config.delete('a.b')
+      expect(result.to_h).to eq({ a: { c: 2 }, d: 3 })
+    end
+
+    it 'returns a new wrapper (immutable)' do
+      result = config.delete('d')
+      expect(result).not_to eq(config)
+      expect(config.get('d')).to eq(3)
+    end
+
+    it 'handles deleting a non-existent path gracefully' do
+      result = config.delete('z.y.x')
+      expect(result.to_h).to eq(hash)
+    end
+
+    it 'handles empty hash' do
+      empty = described_class.wrap({})
+      result = empty.delete('anything')
+      expect(result.to_h).to eq({})
+    end
+  end
+
+  describe '#flatten' do
+    it 'flattens a nested hash' do
+      config = described_class.wrap({ a: { b: 1 }, c: 2 })
+      expect(config.flatten).to eq({ 'a.b' => 1, 'c' => 2 })
+    end
+
+    it 'flattens deeply nested hash' do
+      config = described_class.wrap({ a: { b: { c: { d: 'deep' } } } })
+      expect(config.flatten).to eq({ 'a.b.c.d' => 'deep' })
+    end
+
+    it 'handles flat hash' do
+      config = described_class.wrap({ x: 1, y: 2 })
+      expect(config.flatten).to eq({ 'x' => 1, 'y' => 2 })
+    end
+
+    it 'handles empty hash' do
+      config = described_class.wrap({})
+      expect(config.flatten).to eq({})
+    end
+
+    it 'preserves array values' do
+      config = described_class.wrap({ a: { b: [1, 2] } })
+      expect(config.flatten).to eq({ 'a.b' => [1, 2] })
+    end
+  end
+
+  describe '#merge' do
+    it 'merges with a Hash' do
+      config = described_class.wrap({ a: 1 })
+      result = config.merge({ b: 2 })
+      expect(result.to_h).to eq({ a: 1, b: 2 })
+    end
+
+    it 'merges with another Wrapper' do
+      config = described_class.wrap({ a: 1 })
+      other = described_class.wrap({ b: 2 })
+      result = config.merge(other)
+      expect(result.to_h).to eq({ a: 1, b: 2 })
+    end
+
+    it 'other values take precedence for overlapping keys' do
+      config = described_class.wrap({ a: 1, b: 2 })
+      result = config.merge({ a: 10 })
+      expect(result.get('a')).to eq(10)
+      expect(result.get('b')).to eq(2)
+    end
+
+    it 'deep merges nested hashes' do
+      config = described_class.wrap({ a: { b: 1, c: 2 } })
+      result = config.merge({ a: { c: 3, d: 4 } })
+      expect(result.to_h).to eq({ a: { b: 1, c: 3, d: 4 } })
+    end
+
+    it 'returns a new Wrapper' do
+      config = described_class.wrap({ a: 1 })
+      result = config.merge({ b: 2 })
+      expect(result).to be_a(Philiprehberger::DotAccess::Wrapper)
+      expect(config.to_h).to eq({ a: 1 })
+    end
+
+    it 'handles merging with empty hash' do
+      config = described_class.wrap({ a: 1 })
+      result = config.merge({})
+      expect(result.to_h).to eq({ a: 1 })
+    end
+
+    it 'handles merging empty wrapper with hash' do
+      config = described_class.wrap({})
+      result = config.merge({ a: 1 })
+      expect(result.to_h).to eq({ a: 1 })
+    end
+
+    it 'normalizes string keys from Hash argument' do
+      config = described_class.wrap({ a: 1 })
+      result = config.merge({ 'b' => 2 })
+      expect(result.get('b')).to eq(2)
+    end
+  end
+
   describe 'edge cases' do
     it 'handles an empty hash' do
       config = described_class.wrap({})
