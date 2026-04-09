@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-09
+
+### Added
+- `fetch!` for strict path access that raises `KeyError` on missing paths
+- `slice` for extracting a subset of dot-paths into a new wrapper
+- `values_at` for retrieving multiple values in a single call
+
 ## [0.2.0] - 2026-04-03
 
 ### Added

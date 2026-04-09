@@ -163,6 +163,38 @@ module Philiprehberger
         collect_keys(@data, '', depth, 1)
       end
 
+      # Fetch a value at a dot-path, raising if missing
+      #
+      # @param path [String] dot-separated key path
+      # @return [Object] the value at the path
+      # @raise [KeyError] if the path does not exist
+      def fetch!(path)
+        raise KeyError, "path not found: #{path.inspect}" unless exists?(path)
+
+        get(path)
+      end
+
+      # Return a new Wrapper containing only the specified dot-paths
+      #
+      # @param paths [Array<String>] dot-separated key paths to retain
+      # @return [Wrapper] a new wrapper with only the given paths
+      def slice(*paths)
+        new_data = paths.reduce({}) do |acc, path|
+          next acc unless exists?(path)
+
+          deep_set(acc, path.to_s.split('.'), get(path))
+        end
+        Wrapper.new(new_data)
+      end
+
+      # Return values at the given dot-paths as an array
+      #
+      # @param paths [Array<String>] dot-separated key paths
+      # @return [Array<Object>] values in the order of the given paths
+      def values_at(*paths)
+        paths.map { |path| get(path) }
+      end
+
       # Remove a key at a dot-path, returning a new Wrapper
       #
       # @param path [String] dot-separated key path

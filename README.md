@@ -90,6 +90,22 @@ config.keys              # => ["a.b.c", "d"]
 config.keys(depth: 1)    # => ["a", "d"]
 ```
 
+### Strict Fetch
+
+```ruby
+config = Philiprehberger::DotAccess.wrap({ database: { host: 'localhost' } })
+config.fetch!('database.host')  # => "localhost"
+config.fetch!('database.port')  # raises KeyError
+```
+
+### Slice and Values At
+
+```ruby
+config = Philiprehberger::DotAccess.wrap({ a: { b: 1, c: 2 }, d: 3 })
+config.slice('a.b', 'd').to_h   # => { a: { b: 1 }, d: 3 }
+config.values_at('a.b', 'd')    # => [1, 3]
+```
+
 ### Immutable Deletion
 
 ```ruby
@@ -138,7 +154,10 @@ config.to_h  # => { a: { b: 1 } }
 | Method | Description |
 |--------|-------------|
 | `#get(path, default: nil)` | Retrieve a value by dot-separated path |
+| `#fetch!(path)` | Retrieve a value or raise `KeyError` if the path is missing |
 | `#set(path, value)` | Return a new wrapper with the value set at the path |
+| `#slice(*paths)` | Return a new wrapper containing only the given paths |
+| `#values_at(*paths)` | Return an array of values at the given paths |
 | `#exists?(path)` | Check if a dot-separated path exists (even if value is nil) |
 | `#keys(depth: nil)` | List all dot-path keys, optionally limited by depth |
 | `#delete(path)` | Return a new wrapper without the specified path |
