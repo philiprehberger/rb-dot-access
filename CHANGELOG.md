@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-10
+
+### Added
+- `each` / `each_pair` for iterating over top-level key-value pairs
+- `Enumerable` mixin (adds `map`, `select`, `reject`, `any?`, `none?`, etc.)
+- `empty?` for checking if the wrapped hash has no keys
+- `size` / `count` for returning the number of top-level keys
+- `to_json` for serializing back to JSON
+- `to_yaml` for serializing back to YAML
+
 ## [0.3.0] - 2026-04-09
 
 ### Added

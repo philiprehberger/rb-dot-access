@@ -94,6 +94,8 @@ module Philiprehberger
 
     # Dot-notation wrapper for a hash
     class Wrapper
+      include Enumerable
+
       # @param hash [Hash] the hash to wrap
       def initialize(hash)
         @data = hash.each_with_object({}) do |(key, value), memo|
@@ -220,6 +222,50 @@ module Philiprehberger
         other_hash = other.is_a?(Wrapper) ? other.to_h : symbolize_keys(other)
         merged = deep_merge(to_h, other_hash)
         Wrapper.new(merged)
+      end
+
+      # Iterate over top-level key-value pairs
+      #
+      # @yield [Symbol, Object] each key and its wrapped value
+      # @return [Enumerator] if no block given
+      def each(&)
+        return enum_for(:each) unless block_given?
+
+        @data.each do |key, value|
+          yield key, wrap_value(value)
+        end
+      end
+
+      alias each_pair each
+
+      # Check if the wrapped hash has no keys
+      #
+      # @return [Boolean]
+      def empty?
+        @data.empty?
+      end
+
+      # Return the number of top-level keys
+      #
+      # @return [Integer]
+      def size
+        @data.size
+      end
+
+      alias count size
+
+      # Serialize the wrapped hash to a JSON string
+      #
+      # @return [String] JSON representation
+      def to_json(*args)
+        to_h.to_json(*args)
+      end
+
+      # Serialize the wrapped hash to a YAML string
+      #
+      # @return [String] YAML representation
+      def to_yaml(*args)
+        to_h.to_yaml(*args)
       end
 
       # Check if a key exists in the underlying data

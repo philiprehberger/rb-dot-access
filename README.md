@@ -132,6 +132,31 @@ merged = config.merge({ a: { c: 3, d: 4 } })
 merged.to_h  # => { a: { b: 1, c: 3, d: 4 } }
 ```
 
+### Iteration
+
+```ruby
+config = Philiprehberger::DotAccess.wrap({ a: 1, b: { c: 2 } })
+config.each { |key, value| puts "#{key}: #{value}" }
+config.map { |_key, value| value }   # Enumerable methods included
+config.select { |key, _value| key == :a }
+```
+
+### Size and Emptiness
+
+```ruby
+config = Philiprehberger::DotAccess.wrap({ a: 1, b: 2 })
+config.size    # => 2
+config.empty?  # => false
+```
+
+### Serialization
+
+```ruby
+config = Philiprehberger::DotAccess.wrap({ database: { host: "localhost" } })
+config.to_json  # => '{"database":{"host":"localhost"}}'
+config.to_yaml  # => "---\ndatabase:\n  host: localhost\n"
+```
+
 ### Converting Back to Hash
 
 ```ruby
@@ -163,6 +188,11 @@ config.to_h  # => { a: { b: 1 } }
 | `#delete(path)` | Return a new wrapper without the specified path |
 | `#flatten` | Convert to a flat hash with dot-path string keys |
 | `#merge(other)` | Deep merge with another Wrapper or Hash, returning a new Wrapper |
+| `#each` / `#each_pair` | Iterate over top-level key-value pairs |
+| `#empty?` | Returns `true` if the wrapped hash has no keys |
+| `#size` / `#count` | Returns the number of top-level keys |
+| `#to_json` | Serialize back to a JSON string |
+| `#to_yaml` | Serialize back to a YAML string |
 | `#to_h` | Convert back to a plain hash |
 
 ### `Philiprehberger::DotAccess::NullAccess`
