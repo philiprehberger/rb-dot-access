@@ -123,6 +123,13 @@ config = Philiprehberger::DotAccess.wrap({ a: { b: 1 }, c: 2 })
 config.flatten  # => { "a.b" => 1, "c" => 2 }
 ```
 
+### Compact
+
+```ruby
+config = Philiprehberger::DotAccess.wrap({ a: 1, b: nil, c: { d: nil, e: 2 }, f: [1, nil, 2] })
+config.compact.to_h  # => { a: 1, c: { e: 2 }, f: [1, 2] }
+```
+
 ### Deep Merge
 
 ```ruby
@@ -188,6 +195,7 @@ config.to_h  # => { a: { b: 1 } }
 | `#delete(path)` | Return a new wrapper without the specified path |
 | `#flatten` | Convert to a flat hash with dot-path string keys |
 | `#merge(other)` | Deep merge with another Wrapper or Hash, returning a new Wrapper |
+| `#compact` | Return a new wrapper with all `nil` values removed at every depth |
 | `#each` / `#each_pair` | Iterate over top-level key-value pairs |
 | `#empty?` | Returns `true` if the wrapped hash has no keys |
 | `#size` / `#count` | Returns the number of top-level keys |

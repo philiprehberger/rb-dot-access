@@ -214,6 +214,13 @@ module Philiprehberger
         flatten_hash(@data, '')
       end
 
+      # Return a new Wrapper with all nil values removed at every depth
+      #
+      # @return [Wrapper] a new wrapper with nils removed from hashes and arrays
+      def compact
+        Philiprehberger::DotAccess.wrap(deep_compact(to_h))
+      end
+
       # Deep merge with another Wrapper or Hash
       #
       # @param other [Wrapper, Hash] the other structure to merge
@@ -381,6 +388,20 @@ module Philiprehberger
         hash.each_with_object({}) do |(key, value), memo|
           sym_key = key.is_a?(String) ? key.to_sym : key
           memo[sym_key] = value.is_a?(Hash) ? symbolize_keys(value) : value
+        end
+      end
+
+      def deep_compact(obj)
+        case obj
+        when Hash
+          obj.each_with_object({}) do |(key, value), memo|
+            compacted = deep_compact(value)
+            memo[key] = compacted unless compacted.nil?
+          end
+        when Array
+          obj.map { |item| deep_compact(item) }.compact
+        else
+          obj
         end
       end
 

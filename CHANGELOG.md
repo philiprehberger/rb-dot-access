@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-04-15
+
+### Added
+- `compact` for returning a new wrapper with all `nil` values removed at every depth of the underlying structure
+
 ## [0.4.0] - 2026-04-10
 
 ### Added
