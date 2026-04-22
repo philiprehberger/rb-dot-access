@@ -2,6 +2,6 @@
 
 module Philiprehberger
   module DotAccess
-    VERSION = '0.4.0'
+    VERSION = '0.5.0'
   end
 end

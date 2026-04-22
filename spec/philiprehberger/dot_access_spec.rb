@@ -357,6 +357,58 @@ RSpec.describe Philiprehberger::DotAccess do
     end
   end
 
+  describe '#compact' do
+    it 'removes nil values from a flat hash' do
+      config = described_class.wrap({ a: 1, b: nil, c: 3 })
+      expect(config.compact.to_h).to eq({ a: 1, c: 3 })
+    end
+
+    it 'removes nil-valued keys from nested hashes' do
+      config = described_class.wrap({ a: { b: 1, c: nil }, d: nil, e: { f: 2 } })
+      expect(config.compact.to_h).to eq({ a: { b: 1 }, e: { f: 2 } })
+    end
+
+    it 'removes nil elements from arrays' do
+      config = described_class.wrap({ items: [1, nil, 2, nil, 3] })
+      expect(config.compact.to_h).to eq({ items: [1, 2, 3] })
+    end
+
+    it 'handles deeply nested mix of hashes and arrays' do
+      config = described_class.wrap(
+        { a: { b: [1, nil, { c: nil, d: 2 }], e: nil }, f: nil, g: [nil, nil] }
+      )
+      expect(config.compact.to_h).to eq({ a: { b: [1, { d: 2 }] }, g: [] })
+    end
+
+    it 'returns structurally equal wrapper when there are no nils' do
+      hash = { a: 1, b: { c: 2, d: [3, 4] } }
+      config = described_class.wrap(hash)
+      expect(config.compact.to_h).to eq(hash)
+    end
+
+    it 'preserves an empty hash' do
+      config = described_class.wrap({})
+      expect(config.compact.to_h).to eq({})
+    end
+
+    it 'preserves empty hashes produced by compaction' do
+      config = described_class.wrap({ a: { b: nil }, c: 1 })
+      expect(config.compact.to_h).to eq({ a: {}, c: 1 })
+    end
+
+    it 'does not mutate the original' do
+      hash = { a: 1, b: nil, c: { d: nil, e: 2 } }
+      config = described_class.wrap(hash)
+      config.compact
+      expect(config.to_h).to eq({ a: 1, b: nil, c: { d: nil, e: 2 } })
+    end
+
+    it 'returns a new Wrapper instance' do
+      config = described_class.wrap({ a: 1, b: nil })
+      expect(config.compact).to be_a(Philiprehberger::DotAccess::Wrapper)
+    end
+  end
+
   describe '#fetch!' do
     let(:config) { described_class.wrap({ a: { b: { c: 'deep' } }, x: nil }) }
 
