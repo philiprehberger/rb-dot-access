@@ -569,6 +569,197 @@ RSpec.describe Philiprehberger::DotAccess do
     end
   end
 
+  describe 'array index access via dot-notation' do
+    let(:hash) do
+      {
+        items: [
+          { name: 'a', tags: %w[x y] },
+          { name: 'b', tags: %w[z] }
+        ],
+        empty: []
+      }
+    end
+    let(:config) { described_class.wrap(hash) }
+
+    describe '#get' do
+      it 'retrieves a value via array index' do
+        expect(config.get('items.0.name')).to eq('a')
+      end
+
+      it 'retrieves a value at a deeper array index' do
+        expect(config.get('items.1.tags.0')).to eq('z')
+      end
+
+      it 'supports negative indices' do
+        expect(config.get('items.-1.name')).to eq('b')
+      end
+
+      it 'supports negative indices at leaves' do
+        expect(config.get('items.0.tags.-1')).to eq('y')
+      end
+
+      it 'returns nil for out-of-bounds indices' do
+        expect(config.get('items.99.name')).to be_nil
+      end
+
+      it 'returns the default for out-of-bounds indices' do
+        expect(config.get('items.99.name', default: 'fallback')).to eq('fallback')
+      end
+
+      it 'returns nil for out-of-bounds negative indices' do
+        expect(config.get('items.-99.name')).to be_nil
+      end
+
+      it 'treats integer-looking segments on a Hash as symbol keys' do
+        hash_with_symbol_key = described_class.wrap({ '0': 'foo' })
+        expect(hash_with_symbol_key.get('0')).to eq('foo')
+      end
+    end
+
+    describe '#set' do
+      it 'sets a value via array index' do
+        updated = config.set('items.0.name', 'A')
+        expect(updated.get('items.0.name')).to eq('A')
+      end
+
+      it 'sets a value via negative index' do
+        updated = config.set('items.-1.name', 'B')
+        expect(updated.get('items.1.name')).to eq('B')
+      end
+
+      it 'does not mutate the original array' do
+        config.set('items.0.name', 'A')
+        expect(config.get('items.0.name')).to eq('a')
+      end
+
+      it 'preserves sibling elements when setting one index' do
+        updated = config.set('items.0.name', 'A')
+        expect(updated.get('items.1.name')).to eq('b')
+      end
+
+      it 'sets a deeper value through multiple array indices' do
+        updated = config.set('items.0.tags.1', 'Y')
+        expect(updated.get('items.0.tags.1')).to eq('Y')
+      end
+
+      it 'raises ArgumentError for out-of-bounds positive indices' do
+        expect do
+          config.set('items.99', 'x')
+        end.to raise_error(ArgumentError, /out of bounds/)
+      end
+
+      it 'raises ArgumentError for out-of-bounds negative indices' do
+        expect do
+          config.set('items.-99', 'x')
+        end.to raise_error(ArgumentError, /out of bounds/)
+      end
+
+      it 'raises ArgumentError when setting on an empty array' do
+        expect do
+          config.set('empty.0', 'x')
+        end.to raise_error(ArgumentError, /out of bounds/)
+      end
+    end
+
+    describe '#exists?' do
+      it 'returns true for existing array indices' do
+        expect(config.exists?('items.0')).to be(true)
+      end
+
+      it 'returns true for negative indices within bounds' do
+        expect(config.exists?('items.-1.name')).to be(true)
+      end
+
+      it 'returns true for deeper array paths' do
+        expect(config.exists?('items.0.tags.1')).to be(true)
+      end
+
+      it 'returns false for out-of-bounds indices' do
+        expect(config.exists?('items.99')).to be(false)
+      end
+
+      it 'returns false when descending beyond an array leaf' do
+        expect(config.exists?('items.0.tags.0.foo')).to be(false)
+      end
+    end
+
+    describe '#delete' do
+      it 'removes an element by array index' do
+        updated = config.delete('items.0')
+        expect(updated.get('items').map { |i| i[:name] }).to eq(['b'])
+      end
+
+      it 'removes a key from an element inside an array' do
+        updated = config.delete('items.0.name')
+        expect(updated.get('items.0')).to eq({ tags: %w[x y] })
+      end
+
+      it 'returns a new wrapper (immutable)' do
+        updated = config.delete('items.0')
+        expect(config.get('items').length).to eq(2)
+        expect(updated.get('items').length).to eq(1)
+      end
+
+      it 'ignores out-of-bounds index deletions' do
+        updated = config.delete('items.99')
+        expect(updated.to_h).to eq(hash)
+      end
+
+      it 'supports negative index deletions' do
+        updated = config.delete('items.-1')
+        expect(updated.get('items').map { |i| i[:name] }).to eq(['a'])
+      end
+    end
+  end
+
+  describe '#update' do
+    let(:hash) { { a: { b: 1, c: 2 }, d: 3 } }
+    let(:config) { described_class.wrap(hash) }
+
+    it 'applies multiple paths at once' do
+      updated = config.update('a.b' => 10, 'd' => 30)
+      expect(updated.get('a.b')).to eq(10)
+      expect(updated.get('d')).to eq(30)
+    end
+
+    it 'preserves paths that were not updated' do
+      updated = config.update('a.b' => 10)
+      expect(updated.get('a.c')).to eq(2)
+    end
+
+    it 'returns a new wrapper without mutating the receiver' do
+      config.update('a.b' => 99)
+      expect(config.get('a.b')).to eq(1)
+    end
+
+    it 'returns a frozen wrapper' do
+      updated = config.update('a.b' => 10)
+      expect(updated).to be_frozen
+    end
+
+    it 'returns an equal wrapper when given an empty hash' do
+      updated = config.update({})
+      expect(updated).to eq(config)
+    end
+
+    it 'accepts symbol keys as dot-paths' do
+      updated = config.update('a.b': 42)
+      expect(updated.get('a.b')).to eq(42)
+    end
+
+    it 'creates intermediate keys for new paths' do
+      updated = config.update('x.y.z' => 'new')
+      expect(updated.get('x.y.z')).to eq('new')
+    end
+
+    it 'supports array-index segments' do
+      config_with_array = described_class.wrap({ items: [{ name: 'a' }, { name: 'b' }] })
+      updated = config_with_array.update('items.0.name' => 'A', 'items.1.name' => 'B')
+      expect(updated.get('items.0.name')).to eq('A')
+      expect(updated.get('items.1.name')).to eq('B')
+    end
+  end
+
   describe 'edge cases' do
     it 'handles an empty hash' do
       config = described_class.wrap({})

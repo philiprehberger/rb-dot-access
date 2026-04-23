@@ -59,6 +59,43 @@ updated.database.port  # => 5432
 config.database.port   # => 3306 (unchanged)
 ```
 
+### Array Element Access
+
+Integer path segments are treated as array indices when the current
+value is an `Array`. Negative indices count from the end, following
+Ruby conventions.
+
+```ruby
+config = Philiprehberger::DotAccess.wrap(
+  { items: [{ name: 'a' }, { name: 'b' }] }
+)
+
+config.get('items.0.name')   # => "a"
+config.get('items.-1.name')  # => "b"
+config.exists?('items.1')    # => true
+config.get('items.99.name')  # => nil
+
+updated = config.set('items.0.name', 'A')
+updated.get('items.0.name')  # => "A"
+
+config.delete('items.0').get('items').map { |i| i[:name] }
+# => ["b"]
+```
+
+Out-of-bounds indices raise `ArgumentError` on `set`/`update` and
+return `nil` on `get`.
+
+### Batch Updates
+
+```ruby
+config  = Philiprehberger::DotAccess.wrap({ a: { b: 1, c: 2 }, d: 3 })
+updated = config.update('a.b' => 10, 'd' => 30)
+
+updated.get('a.b')  # => 10
+updated.get('a.c')  # => 2 (unchanged)
+updated.get('d')    # => 30
+```
+
 ### YAML Loading
 
 ```ruby
@@ -185,14 +222,15 @@ config.to_h  # => { a: { b: 1 } }
 
 | Method | Description |
 |--------|-------------|
-| `#get(path, default: nil)` | Retrieve a value by dot-separated path |
+| `#get(path, default: nil)` | Retrieve a value by dot-separated path (supports array indices) |
 | `#fetch!(path)` | Retrieve a value or raise `KeyError` if the path is missing |
-| `#set(path, value)` | Return a new wrapper with the value set at the path |
+| `#set(path, value)` | Return a new wrapper with the value set at the path (supports array indices) |
+| `#update(paths_hash)` | Batch-set multiple dot-paths, returning a new wrapper |
 | `#slice(*paths)` | Return a new wrapper containing only the given paths |
 | `#values_at(*paths)` | Return an array of values at the given paths |
 | `#exists?(path)` | Check if a dot-separated path exists (even if value is nil) |
 | `#keys(depth: nil)` | List all dot-path keys, optionally limited by depth |
-| `#delete(path)` | Return a new wrapper without the specified path |
+| `#delete(path)` | Return a new wrapper without the specified path (supports array indices) |
 | `#flatten` | Convert to a flat hash with dot-path string keys |
 | `#merge(other)` | Deep merge with another Wrapper or Hash, returning a new Wrapper |
 | `#compact` | Return a new wrapper with all `nil` values removed at every depth |

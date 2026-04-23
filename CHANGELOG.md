@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-04-23
+
+### Added
+- Array-index support in dot paths (e.g. `"items.0.name"`, `"items.-1.value"`) for `get`, `set`, `exists?`, and `delete`.
+- `#update(paths_hash)` batch-sets multiple paths and returns a new frozen `DotAccess`.
+- YARD documentation on all public methods.
+
 ## [0.5.0] - 2026-04-15
 
 ### Added
