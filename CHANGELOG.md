@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-04-30
+
+### Added
+- `DotAccess.from_flat(hash)` — build a `Wrapper` from a hash of dot-paths to values; inverse of `Wrapper#flatten`. Integer-looking segments produce arrays.
+
 ## [0.6.0] - 2026-04-23
 
 ### Added

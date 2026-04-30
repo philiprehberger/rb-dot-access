@@ -34,6 +34,25 @@ module Philiprehberger
       wrap(normalize_keys(data))
     end
 
+    # Build a Wrapper from a hash whose keys are dot-paths.
+    #
+    # Inverse of {Wrapper#flatten} — passing the result of `wrap(h).flatten`
+    # back through `from_flat` reconstructs the original (symbol-keyed)
+    # structure. Arrays are preserved as opaque values: `#flatten` does not
+    # explode array elements into separate dot-paths, and `from_flat`
+    # therefore cannot create new array slots from integer-only segments.
+    #
+    # @param hash [Hash] map of dot-paths to values
+    # @return [Wrapper] a dot-accessible wrapper
+    # @raise [Error] if `hash` is not a Hash
+    def self.from_flat(hash)
+      raise Error, 'Expected a Hash' unless hash.is_a?(Hash)
+
+      hash.reduce(wrap({})) do |wrapper, (path, value)|
+        wrapper.set(path, value)
+      end
+    end
+
     # Parse a JSON string and wrap the result
     #
     # @param str [String] JSON string

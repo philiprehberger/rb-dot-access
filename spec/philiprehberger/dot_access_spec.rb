@@ -304,6 +304,38 @@ RSpec.describe Philiprehberger::DotAccess do
     end
   end
 
+  describe '.from_flat' do
+    it 'returns an empty wrapper for an empty hash' do
+      expect(described_class.from_flat({}).to_h).to eq({})
+    end
+
+    it 'rebuilds a flat structure from single-segment paths' do
+      result = described_class.from_flat({ 'x' => 1, 'y' => 2 })
+      expect(result.to_h).to eq({ x: 1, y: 2 })
+    end
+
+    it 'rebuilds nested structures from multi-segment paths' do
+      result = described_class.from_flat({ 'a.b.c' => 'deep', 'a.b.d' => 'other' })
+      expect(result.to_h).to eq({ a: { b: { c: 'deep', d: 'other' } } })
+    end
+
+    it 'round-trips with #flatten for symbol-keyed hashes' do
+      original = { a: { b: 1 }, c: 2, d: { e: { f: 'deep' } } }
+      flat = described_class.wrap(original).flatten
+      expect(described_class.from_flat(flat).to_h).to eq(original)
+    end
+
+    it 'round-trips arrays as opaque values (flatten does not explode array elements)' do
+      original = { items: [1, 2, 3], meta: { total: 3 } }
+      flat = described_class.wrap(original).flatten
+      expect(described_class.from_flat(flat).to_h).to eq(original)
+    end
+
+    it 'raises Error when input is not a Hash' do
+      expect { described_class.from_flat('not a hash') }.to raise_error(Philiprehberger::DotAccess::Error)
+    end
+  end
+
   describe '#merge' do
     it 'merges with a Hash' do
       config = described_class.wrap({ a: 1 })

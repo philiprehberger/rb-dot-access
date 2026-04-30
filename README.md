@@ -160,6 +160,28 @@ config = Philiprehberger::DotAccess.wrap({ a: { b: 1 }, c: 2 })
 config.flatten  # => { "a.b" => 1, "c" => 2 }
 ```
 
+### From Flat
+
+Inverse of `#flatten` — rebuild a wrapper from a hash of dot-paths to values.
+Useful for reconstituting data from flat storage like environment variables
+or columnar files.
+
+```ruby
+flat = { "database.host" => "localhost", "database.port" => 5432 }
+config = Philiprehberger::DotAccess.from_flat(flat)
+config.database.host  # => "localhost"
+
+# Round-trip works for nested hash structures
+original = { a: { b: 1 }, c: 2 }
+Philiprehberger::DotAccess.from_flat(
+  Philiprehberger::DotAccess.wrap(original).flatten
+).to_h  # => { a: { b: 1 }, c: 2 }
+```
+
+Arrays are carried through as opaque values — `#flatten` does not explode
+array elements into separate dot-paths, and `from_flat` cannot create new
+array slots from integer-only segments.
+
 ### Compact
 
 ```ruby
@@ -217,6 +239,7 @@ config.to_h  # => { a: { b: 1 } }
 | `.wrap(hash)` | Wrap a hash for dot-notation access |
 | `.from_yaml(str_or_path)` | Parse YAML string or file and wrap the result |
 | `.from_json(str)` | Parse JSON string and wrap the result |
+| `.from_flat(hash)` | Build a wrapper from a hash of dot-paths to values (inverse of `#flatten`) |
 
 ### `Philiprehberger::DotAccess::Wrapper`
 
