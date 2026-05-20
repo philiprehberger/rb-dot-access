@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-20
+
+### Added
+- JSON Pointer (RFC 6901) support: `Wrapper#get_pointer`, `#set_pointer`, `#delete_pointer`, and `#has_pointer?` plus the helper `Wrapper.parse_pointer`, for interop with JSON Schema and JSON Patch tooling
+- Card image reference in the README for registry-side rendering
+
+### Changed
+- Raised the `Metrics/ClassLength` RuboCop ceiling on `Wrapper` to fit the new pointer methods
+
 ## [0.7.0] - 2026-04-30
 
 ### Added

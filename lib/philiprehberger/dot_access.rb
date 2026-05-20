@@ -257,6 +257,100 @@ module Philiprehberger
         Wrapper.new(new_data)
       end
 
+      # Access a value by a JSON Pointer (RFC 6901) path.
+      #
+      # JSON Pointer paths start with `/`, separate segments with `/`, and escape
+      # `~` as `~0` and `/` as `~1`. An empty pointer (`""`) refers to the whole
+      # wrapped document.
+      #
+      # @param pointer [String] the JSON Pointer (e.g. `"/users/0/name"`)
+      # @param default [Object] value returned if the pointer is not found
+      # @return [Object] the value at the pointer, or ``default``
+      def get_pointer(pointer, default: nil)
+        segments = Wrapper.parse_pointer(pointer)
+        return self if segments.empty?
+
+        result = segments.reduce(@data) do |current, seg|
+          case current
+          when Hash then current[seg.to_sym]
+          when Array
+            index = array_index(seg, current)
+            return default if index.nil?
+
+            current[index]
+          else return default
+          end
+        end
+
+        result.nil? ? default : result
+      end
+
+      # Whether a JSON Pointer (RFC 6901) path exists in the wrapped structure.
+      #
+      # @param pointer [String] the JSON Pointer
+      # @return [Boolean]
+      def has_pointer?(pointer)
+        segments = Wrapper.parse_pointer(pointer)
+        return true if segments.empty?
+
+        current = @data
+        segments.each do |seg|
+          case current
+          when Hash
+            return false unless current.key?(seg.to_sym)
+
+            current = current[seg.to_sym]
+          when Array
+            index = array_index(seg, current)
+            return false if index.nil?
+
+            current = current[index]
+          else
+            return false
+          end
+        end
+        true
+      end
+
+      # Set a value at a JSON Pointer path, returning a new Wrapper.
+      #
+      # @param pointer [String] the JSON Pointer
+      # @param value [Object] the value to set
+      # @return [Wrapper] a new wrapper with the updated value
+      # @raise [Error] if the pointer is empty (would replace the entire document)
+      def set_pointer(pointer, value)
+        segments = Wrapper.parse_pointer(pointer)
+        raise Error, 'cannot set the root pointer' if segments.empty?
+
+        Wrapper.new(deep_set(to_h, segments, value))
+      end
+
+      # Delete the value at a JSON Pointer path, returning a new Wrapper.
+      #
+      # @param pointer [String] the JSON Pointer
+      # @return [Wrapper] a new wrapper without the specified pointer
+      # @raise [Error] if the pointer is empty
+      def delete_pointer(pointer)
+        segments = Wrapper.parse_pointer(pointer)
+        raise Error, 'cannot delete the root pointer' if segments.empty?
+
+        Wrapper.new(deep_delete(to_h, segments))
+      end
+
+      # Parse a JSON Pointer string into an array of unescaped segments.
+      # Public so callers and {#get_pointer}/{#set_pointer}/etc. share one parser.
+      #
+      # @param pointer [String]
+      # @return [Array<String>] the unescaped segments
+      # @raise [Error] if the pointer is not a String or does not start with `/`
+      def self.parse_pointer(pointer)
+        raise Error, 'pointer must be a String' unless pointer.is_a?(String)
+        return [] if pointer.empty?
+        raise Error, "JSON Pointer must start with '/' (got #{pointer.inspect})" unless pointer.start_with?('/')
+
+        pointer[1..].split('/', -1).map { |seg| seg.gsub('~1', '/').gsub('~0', '~') }
+      end
+
       # Flatten the nested structure into a hash whose keys are dot-paths.
       #
       # @return [Hash] flat hash where keys are dot-path strings

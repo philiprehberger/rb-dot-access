@@ -4,6 +4,8 @@
 [![Gem Version](https://badge.fury.io/rb/philiprehberger-dot_access.svg)](https://rubygems.org/gems/philiprehberger-dot_access)
 [![Last updated](https://img.shields.io/github/last-commit/philiprehberger/rb-dot-access)](https://github.com/philiprehberger/rb-dot-access/commits/main)
 
+![philiprehberger-dot_access](https://raw.githubusercontent.com/philiprehberger/rb-dot-access/main/package-card.webp)
+
 Dot-notation accessor for nested hashes with nil-safe traversal
 
 ## Requirements
@@ -230,6 +232,28 @@ config = Philiprehberger::DotAccess.wrap({ a: { b: 1 } })
 config.to_h  # => { a: { b: 1 } }
 ```
 
+### JSON Pointer (RFC 6901) Access
+
+Useful when interoperating with JSON Schema, JSON Patch, or any tooling that already speaks JSON Pointer paths.
+
+```ruby
+data = Philiprehberger::DotAccess.wrap(
+  users: [{ name: "alice" }, { name: "bob" }],
+  "a/b": { "c~d": 1 }
+)
+
+data.get_pointer("/users/0/name")          # => "alice"
+data.get_pointer("")                        # => the wrapper itself (root)
+data.get_pointer("/missing", default: :nf)  # => :nf
+
+# ~1 escapes /, ~0 escapes ~ — so the key "a/b" → "a~1b"
+data.get_pointer("/a~1b/c~0d")  # => 1
+
+data.has_pointer?("/users/1/name")  # => true
+updated = data.set_pointer("/users/0/name", "alex")
+trimmed = data.delete_pointer("/users/0/name")
+```
+
 ## API
 
 ### `Philiprehberger::DotAccess`
@@ -263,6 +287,10 @@ config.to_h  # => { a: { b: 1 } }
 | `#to_json` | Serialize back to a JSON string |
 | `#to_yaml` | Serialize back to a YAML string |
 | `#to_h` | Convert back to a plain hash |
+| `#get_pointer(pointer, default: nil)` | Retrieve a value by a JSON Pointer (RFC 6901) path |
+| `#has_pointer?(pointer)` | Check if a JSON Pointer path exists |
+| `#set_pointer(pointer, value)` | Return a new wrapper with the value set at a JSON Pointer path |
+| `#delete_pointer(pointer)` | Return a new wrapper without the value at a JSON Pointer path |
 
 ### `Philiprehberger::DotAccess::NullAccess`
 

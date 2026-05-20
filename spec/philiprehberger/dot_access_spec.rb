@@ -831,4 +831,89 @@ RSpec.describe Philiprehberger::DotAccess do
       expect(config.inspect).to include('DotAccess::Wrapper')
     end
   end
+
+  describe 'JSON Pointer (RFC 6901) access' do
+    let(:data) do
+      described_class.wrap(
+        users: [
+          { name: 'alice', tags: ['admin'] },
+          { name: 'bob', tags: ['user'] }
+        ],
+        'a/b': { 'c~d': 1 },
+        empty_key: { '': 'value-at-empty' }
+      )
+    end
+
+    describe '#get_pointer' do
+      it 'returns the whole document for an empty pointer' do
+        expect(data.get_pointer('')).to equal(data)
+      end
+
+      it 'returns a nested hash value' do
+        expect(data.get_pointer('/users/0/name')).to eq('alice')
+      end
+
+      it 'returns an array element' do
+        expect(data.get_pointer('/users/1/tags/0')).to eq('user')
+      end
+
+      it 'returns default when the path is missing' do
+        expect(data.get_pointer('/users/99/name', default: :missing)).to eq(:missing)
+      end
+
+      it 'unescapes ~1 as / and ~0 as ~' do
+        expect(data.get_pointer('/a~1b/c~0d')).to eq(1)
+      end
+
+      it 'supports an empty trailing segment as an empty key' do
+        expect(data.get_pointer('/empty_key/')).to eq('value-at-empty')
+      end
+
+      it 'raises Error when the pointer does not start with /' do
+        expect { data.get_pointer('users/0/name') }.to raise_error(described_class::Error)
+      end
+    end
+
+    describe '#has_pointer?' do
+      it 'is true for the root pointer' do
+        expect(data.has_pointer?('')).to be true
+      end
+
+      it 'is true for a known path' do
+        expect(data.has_pointer?('/users/0/tags/0')).to be true
+      end
+
+      it 'is false for a missing index' do
+        expect(data.has_pointer?('/users/99')).to be false
+      end
+
+      it 'is false for a missing key' do
+        expect(data.has_pointer?('/users/0/missing')).to be false
+      end
+    end
+
+    describe '#set_pointer' do
+      it 'sets a nested value and returns a new wrapper' do
+        updated = data.set_pointer('/users/0/name', 'alex')
+        expect(updated.get_pointer('/users/0/name')).to eq('alex')
+        expect(data.get_pointer('/users/0/name')).to eq('alice')
+      end
+
+      it 'rejects the root pointer' do
+        expect { data.set_pointer('', :nope) }.to raise_error(described_class::Error)
+      end
+    end
+
+    describe '#delete_pointer' do
+      it 'removes a nested key' do
+        updated = data.delete_pointer('/users/0/name')
+        expect(updated.has_pointer?('/users/0/name')).to be false
+        expect(updated.get_pointer('/users/0/tags/0')).to eq('admin')
+      end
+
+      it 'rejects the root pointer' do
+        expect { data.delete_pointer('') }.to raise_error(described_class::Error)
+      end
+    end
+  end
 end
